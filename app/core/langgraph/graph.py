@@ -15,7 +15,7 @@ from langchain_core.messages import (
     convert_to_openai_messages,
 )
 from langchain_openai import ChatOpenAI
-from langfuse.callback import CallbackHandler
+from langfuse.langchain import CallbackHandler
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import (
     END,
@@ -280,13 +280,12 @@ class LangGraphAgent:
         config = {
             "configurable": {"thread_id": session_id},
             "callbacks": [
-                CallbackHandler(
-                    environment=settings.ENVIRONMENT.value,
-                    debug=False,
-                    user_id=user_id,
-                    session_id=session_id,
-                )
+                CallbackHandler(public_key=settings.LANGFUSE_PUBLIC_KEY)
             ],
+            "metadata": {
+                "session_id": session_id,
+                "user_id": user_id,
+            }
         }
         try:
 
@@ -314,16 +313,18 @@ class LangGraphAgent:
         config = {
             "configurable": {"thread_id": session_id},
             "callbacks": [
-                CallbackHandler(
-                    environment=settings.ENVIRONMENT.value, debug=False, user_id=user_id, session_id=session_id
-                )
+                CallbackHandler(public_key=settings.LANGFUSE_PUBLIC_KEY)
             ],
+            "metadata": {
+                "session_id": session_id,
+                "user_id": user_id,
+            }
         }
         if self._graph is None:
             self._graph = await self.create_graph()
 
         try:
-            async for token, _ in self._graph.astream(
+            async for token in self._graph.astream(
                 {"messages": dump_messages(messages), "session_id": session_id}, config, stream_mode="messages"
             ):
                 try:
